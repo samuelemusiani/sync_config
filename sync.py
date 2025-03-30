@@ -12,8 +12,9 @@ import re
 
 README = "# THIS REPO IS MANAGED BY A SCRIPT\n"
 
+
 def init_repo(repo_url, token, repo_path, commit_name, commit_email):
-    print(f'Cloning repo')
+    print('Cloning repo')
 
     repo_with_token = repo_url[:8] + token + '@' + repo_url[8:]
 
@@ -25,10 +26,9 @@ def init_repo(repo_url, token, repo_path, commit_name, commit_email):
 
     # If the repo is empty, create a README file
     if len(repo.heads) == 0:
-        print(f'Cloned empty repo. Initializing README')
+        print('Cloned empty repo. Initializing README')
         with open(os.path.join(repo_path, 'README.md'), 'w') as f:
             f.write(README)
-
 
         repo.index.add(['README.md'])
         repo.index.commit('Initial commit')
@@ -37,12 +37,12 @@ def init_repo(repo_url, token, repo_path, commit_name, commit_email):
 
         origin.push('main')
     else:
-        print(f'Repo is not empty. Checking README')
+        print('Repo is not empty. Checking README')
         need_commit = False
         with open(os.path.join(repo_path, 'README.md'), 'r+') as f:
             content = f.read()
             if content.find(README) == -1:
-                print(f'Updating README')
+                print('Updating README')
                 f.seek(0, 0)
                 f.write(README + content)
 
@@ -56,6 +56,7 @@ def init_repo(repo_url, token, repo_path, commit_name, commit_email):
 
     return repo
 
+
 def pull_repo(repo):
     try:
         repo.remotes.origin.pull()
@@ -63,12 +64,14 @@ def pull_repo(repo):
         print(f"Error pulling repo: {e}")
         sys.exit(1)
 
+
 def repo_push(repo):
     try:
         repo.remotes.origin.push()
     except git.exc.GitCommandError as e:
         print(f"Error pushing repo: {e}")
         sys.exit(1)
+
 
 def backup_dir(dir, repo, repo_path):
     src_path = dir['path']
@@ -102,6 +105,7 @@ def backup_dir(dir, repo, repo_path):
             shutil.copy(src_file, dest_file)
             repo.index.add([dest_file])
 
+
 def force_ipv4_socket():
     socket.getaddrinfo = lambda *args, **kwargs: [
         addr for addr in socket._socket.getaddrinfo(*args, **kwargs)
@@ -125,7 +129,7 @@ Commit: [{commit[:7]}]({re.escape(repo_url)}/commit/{commit})\\
     print(m_formatted)
 
     asyncio.run(bot.send_message(
-        chat_id=chat_id, 
+        chat_id=chat_id,
         text=m_formatted,
         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2
     ))
@@ -137,7 +141,7 @@ def main():
         sys.exit(1)
     config_path = sys.argv[1]
 
-    #print(f'Config path: {config_path}')
+    # print(f'Config path: {config_path}')
 
     with open(config_path, 'r') as f:
         try:
@@ -146,14 +150,15 @@ def main():
             print(f"Error reading config file: {e}")
             sys.exit(1)
 
-    #print(config)
+    # print(config)
 
     # For telegram to work, we need to force the socket to use ipv4
     force_ipv4_socket()
 
     if not os.path.exists(config.globals.git.path):
         cg = config.globals.git
-        repo = init_repo(cg.url, cg.token, cg.path, cg.commit.name, cg.commit.email)
+        repo = init_repo(cg.url, cg.token, cg.path,
+                         cg.commit.name, cg.commit.email)
     else:
         repo = git.Repo(config.globals.git.path)
 
@@ -176,7 +181,10 @@ def main():
 
     repo_push(repo)
 
-    send_telegram_message(config.globals.telegram.token, config.globals.telegram.chat_id, diff, commit.hexsha, config.globals.git.url)
+    send_telegram_message(config.globals.telegram.token,
+                          config.globals.telegram.chat_id, diff, commit.hexsha,
+                          config.globals.git.url)
+
 
 if __name__ == "__main__":
     main()
