@@ -105,6 +105,10 @@ def backup_dir(dir, repo, repo_path):
             if not os.path.exists(dest_dir):
                 os.makedirs(dest_dir)
 
+            if not os.path.isdir(dest_dir):
+                print(f"Path {dest_dir} is not a directory")
+                os.unlink(dest_dir)
+
             print(f"Copying file {dest_file}")
             shutil.copy(src_file, dest_file)
             repo.index.add([dest_file])
@@ -123,6 +127,10 @@ def backup_file(file, repo, repo_path):
     dest_dir = os.path.dirname(dest_path)
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
+
+    if not os.path.isdir(dest_dir):
+        print(f"Path {dest_dir} is not a directory")
+        os.unlink(dest_dir)
 
     shutil.copy(src_path, dest_path)
     repo.index.add([dest_path])
