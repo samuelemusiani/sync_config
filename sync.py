@@ -193,10 +193,14 @@ def main():
 
     pull_repo(repo)
 
-    for d in config.dirs:
+    dirs = config.get('dirs', [])
+    dirs = dirs if dirs is not None else []
+    for d in dirs:
         backup_dir(d, repo, config.globals.git.path)
 
-    for f in config.files:
+    files = config.get('files', [])
+    files = files if files is not None else []
+    for f in files:
         backup_file(f, repo, config.globals.git.path)
 
     diff = repo.git.diff("--cached")
