@@ -9,6 +9,7 @@ import telegram
 import socket
 import asyncio
 import re
+from box import Box
 
 README = "# THIS REPO IS MANAGED BY A SCRIPT\n"
 
@@ -76,7 +77,10 @@ def repo_push(repo):
 def backup_dir(dir, repo, repo_path):
     src_path = dir['path']
     dest_path = os.path.join(repo_path, dir['repo_path'])
+
     exclude = dir.get('exclude', [])
+    exclude = exclude if exclude is not None else []
+
     print(f'Backing up {src_path} into {dest_path}')
 
     if not os.path.exists(src_path):
@@ -116,12 +120,15 @@ def force_ipv4_socket():
 def send_telegram_message(token, chat_id, message, commit, repo_url):
     bot = telegram.Bot(token=token)
 
+    s1 = repo_url.removesuffix('.git')
+    commit_url = f"{re.escape(s1)}/commit/{commit}"
+
     m_formatted = f"""
 *Config sync notification*\\
-A configuration update has been saved\.\\
-Commit: [{commit[:7]}]({re.escape(repo_url)}/commit/{commit})\\
+A configuration update has been saved\\.\\
+Commit: [{commit[:7]}]({commit_url})\\
 *Details:*\\
-```
+```diff
 {message}
 ```
 """
@@ -150,7 +157,7 @@ def main():
             print(f"Error reading config file: {e}")
             sys.exit(1)
 
-    # print(config)
+    config = Box(config)
 
     # For telegram to work, we need to force the socket to use ipv4
     force_ipv4_socket()
