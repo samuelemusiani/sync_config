@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
 
-# Change the following variables to match your configuration
-GIT_REPO_URL="" # URL should be https://...
-GIT_TOKEN=""
-REPO_PATH="/root/sync-script" # Local path where the repo will be cloned
-
-# You can use a telegram bot to send notifications when the script updates the 
-# repo
-TELEGRAM_BOT_TOKEN=""
-CHAT_ID=""
-
-# This is the name and email that will be used to commit changes
-COMMIT_NAME="Script sync"
-COMMIT_EMAIL="sync@mail.invalid"
-
 import sys
 import yaml
 import git
@@ -25,20 +11,22 @@ import asyncio
 import re
 
 README = "# THIS REPO IS MANAGED BY A SCRIPT\n"
-REPO_WITH_TOKEN=GIT_REPO_URL[:8] + GIT_TOKEN + '@' + GIT_REPO_URL[8:]
 
-def init_repo():
+def init_repo(repo_url, token, repo_path, commit_name, commit_email):
     print(f'Cloning repo')
-    repo = git.Repo.clone_from(REPO_WITH_TOKEN, REPO_PATH)
+
+    repo_with_token = repo_url[:8] + token + '@' + repo_url[8:]
+
+    repo = git.Repo.clone_from(repo_with_token, repo_path)
 
     with repo.config_writer() as cw:
-        cw.set_value("user", "name", COMMIT_NAME)
-        cw.set_value("user", "email", COMMIT_EMAIL)
+        cw.set_value("user", "name", commit_name)
+        cw.set_value("user", "email", commit_email)
 
     # If the repo is empty, create a README file
     if len(repo.heads) == 0:
         print(f'Cloned empty repo. Initializing README')
-        with open(os.path.join(REPO_PATH, 'README.md'), 'w') as f:
+        with open(os.path.join(repo_path, 'README.md'), 'w') as f:
             f.write(README)
 
 
@@ -51,7 +39,7 @@ def init_repo():
     else:
         print(f'Repo is not empty. Checking README')
         need_commit = False
-        with open(os.path.join(REPO_PATH, 'README.md'), 'r+') as f:
+        with open(os.path.join(repo_path, 'README.md'), 'r+') as f:
             content = f.read()
             if content.find(README) == -1:
                 print(f'Updating README')
@@ -82,9 +70,9 @@ def repo_push(repo):
         print(f"Error pushing repo: {e}")
         sys.exit(1)
 
-def backup_dir(dir, repo):
+def backup_dir(dir, repo, repo_path):
     src_path = dir['path']
-    dest_path = os.path.join(REPO_PATH, dir['repo_path'])
+    dest_path = os.path.join(repo_path, dir['repo_path'])
     exclude = dir.get('exclude', [])
     print(f'Backing up {src_path} into {dest_path}')
 
@@ -104,7 +92,7 @@ def backup_dir(dir, repo):
 
             # We must preserve the directory structure in the repo
             rel_dest_file = os.path.relpath(os.path.join(root, f), src_path)
-            dest_file = os.path.join(REPO_PATH, dest_path, rel_dest_file)
+            dest_file = os.path.join(repo_path, dest_path, rel_dest_file)
 
             dest_dir = os.path.dirname(dest_file)
             if not os.path.exists(dest_dir):
@@ -121,13 +109,13 @@ def force_ipv4_socket():
     ]
 
 
-def send_telegram_message(message, commit):
-    bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
+def send_telegram_message(token, chat_id, message, commit, repo_url):
+    bot = telegram.Bot(token=token)
 
     m_formatted = f"""
 *Config sync notification*\\
 A configuration update has been saved\.\\
-Commit: [{commit[:7]}]({re.escape(GIT_REPO_URL)}/commit/{commit})\\
+Commit: [{commit[:7]}]({re.escape(repo_url)}/commit/{commit})\\
 *Details:*\\
 ```
 {message}
@@ -137,7 +125,7 @@ Commit: [{commit[:7]}]({re.escape(GIT_REPO_URL)}/commit/{commit})\\
     print(m_formatted)
 
     asyncio.run(bot.send_message(
-        chat_id=CHAT_ID, 
+        chat_id=chat_id, 
         text=m_formatted,
         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2
     ))
@@ -163,19 +151,20 @@ def main():
     # For telegram to work, we need to force the socket to use ipv4
     force_ipv4_socket()
 
-    if not os.path.exists(REPO_PATH):
-        repo = init_repo()
+    if not os.path.exists(config.globals.git.path):
+        cg = config.globals.git
+        repo = init_repo(cg.url, cg.token, cg.path, cg.commit.name, cg.commit.email)
     else:
-        repo = git.Repo(REPO_PATH)
+        repo = git.Repo(config.globals.git.path)
 
     with repo.config_writer() as cw:
-        cw.set_value("user", "name", COMMIT_NAME)
-        cw.set_value("user", "email", COMMIT_EMAIL)
+        cw.set_value("user", "name", config.globals.git.commit.name)
+        cw.set_value("user", "email", config.globals.git.commit.email)
 
     pull_repo(repo)
 
     for d in config['dirs']:
-        backup_dir(d, repo)
+        backup_dir(d, repo, config.globals.git.path)
 
     diff = repo.git.diff("--cached")
 
@@ -187,7 +176,7 @@ def main():
 
     repo_push(repo)
 
-    send_telegram_message(diff, commit.hexsha)
+    send_telegram_message(config.globals.telegram.token, config.globals.telegram.chat_id, diff, commit.hexsha, config.globals.git.url)
 
 if __name__ == "__main__":
     main()

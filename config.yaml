@@ -1,0 +1,34 @@
+# Globals settings for the script
+globals:
+  git:
+    # URL of the git repository where the files will be pushed
+    url: https://fake.int/repo.git
+    # Token to authenticate to the git repository
+    token: fake_token
+    # Absolute path to the git repository where it will be stored locally
+    path: /root/sync-script
+
+    commit:
+      # Name and email to use when committing
+      name: Sync Script
+      email: sync@mail.invalid
+
+  telegram:
+    # Token to authenticate to the Telegram API
+    token: fake_token
+    # Chat ID to send the messages
+    chat_id: "123456789"
+
+# path is ABSOLUTE (must start with /)
+# repo_path is RELATIVE to the repo root
+# exclude is a list of ABSOLUTE paths to exclude from the sync
+dirs:
+  - path: /etc/shorewall
+    repo_path: shorewall
+    exclude:
+      - /etc/shorewall/maclist
+
+  - path: /etc/shorewall6
+    repo_path: shorewall6
+    exclude:
+      - /etc/shorewall6/maclist
