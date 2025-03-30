@@ -110,6 +110,24 @@ def backup_dir(dir, repo, repo_path):
             repo.index.add([dest_file])
 
 
+def backup_file(file, repo, repo_path):
+    src_path = file['path']
+    dest_path = os.path.join(repo_path, file['repo_path'])
+
+    print(f'Backing up {src_path} into {dest_path}')
+
+    if not os.path.exists(src_path):
+        print(f"Path {src_path} does not exist")
+        return
+
+    dest_dir = os.path.dirname(dest_path)
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+
+    shutil.copy(src_path, dest_path)
+    repo.index.add([dest_path])
+
+
 def force_ipv4_socket():
     socket.getaddrinfo = lambda *args, **kwargs: [
         addr for addr in socket._socket.getaddrinfo(*args, **kwargs)
@@ -175,8 +193,11 @@ def main():
 
     pull_repo(repo)
 
-    for d in config['dirs']:
+    for d in config.dirs:
         backup_dir(d, repo, config.globals.git.path)
+
+    for f in config.files:
+        backup_file(f, repo, config.globals.git.path)
 
     diff = repo.git.diff("--cached")
 
