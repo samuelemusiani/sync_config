@@ -110,7 +110,6 @@ def backup_dir(dir, repo, repo_path):
             if src_file in exclude:
                 print(f"Deleting file {dest_file}")
                 os.unlink(dest_file)
-                continue
             else:
                 print(f"Copying file {dest_file}")
                 shutil.copy(src_file, dest_file)
