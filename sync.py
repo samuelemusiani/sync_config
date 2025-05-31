@@ -94,9 +94,6 @@ def backup_dir(dir, repo, repo_path):
         for f in files:
             src_file = os.path.join(root, f)
 
-            if src_file in exclude:
-                continue
-
             # We must preserve the directory structure in the repo
             rel_dest_file = os.path.relpath(os.path.join(root, f), src_path)
             dest_file = os.path.join(repo_path, dest_path, rel_dest_file)
@@ -110,8 +107,14 @@ def backup_dir(dir, repo, repo_path):
                 os.unlink(dest_dir)
                 os.makedirs(dest_dir)
 
-            print(f"Copying file {dest_file}")
-            shutil.copy(src_file, dest_file)
+            if src_file in exclude:
+                print(f"Deleting file {dest_file}")
+                os.unlink(dest_file)
+                continue
+            else:
+                print(f"Copying file {dest_file}")
+                shutil.copy(src_file, dest_file)
+
             repo.index.add([dest_file])
 
 
